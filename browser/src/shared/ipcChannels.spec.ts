@@ -1,5 +1,4 @@
 import { CHANNELS } from './ipcChannels.js';
-import { strict as assert } from 'node:assert';
 
 /**
  * Test that all IPC channel values are unique

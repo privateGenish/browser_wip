@@ -1,8 +1,25 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, ipcMain, BrowserWindow } from 'electron';
 import { CHANNELS } from '../shared/ipcChannels';
-import path from 'path';
+import { createWindow } from './windowFactory';
+
+// Single instance lock
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  app.quit();
+  process.exit(0);
+}
 
 let mainWindow: BrowserWindow | null = null;
+
+// Handle second instance
+app.on('second-instance', () => {
+  const win = BrowserWindow.getAllWindows()[0];
+  if (win) {
+    if (win.isMinimized()) win.restore();
+    win.show();
+    win.focus();
+  }
+});
 
 // Placeholder for tab management logic
 interface Tab {
@@ -14,25 +31,9 @@ interface Tab {
 let tabs: Tab[] = [];
 let currentTabId: number | null = null;
 
-function createWindow() {
-  mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.mjs'),
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
-  });
-
-  mainWindow.loadFile('index.html');
-
-  // Open DevTools for debugging
-  mainWindow.webContents.openDevTools();
-}
-
 app.whenReady().then(() => {
-  createWindow();
+  // Create the main window using the factory
+  mainWindow = createWindow();
 
   // Handle 'tabs-create' event
   ipcMain.on(CHANNELS.TABS_CREATE, () => {
@@ -72,17 +73,17 @@ app.whenReady().then(() => {
   });
 
   // Handle 'tabs-back' event
-  ipcMain.on(CHANNELS.TABS_GO_BACK, (_event, id: number) => {
+  ipcMain.on(CHANNELS.TABS_GO_BACK, () => {
     // Implement navigation logic as needed
   });
 
   // Handle 'tabs-forward' event
-  ipcMain.on(CHANNELS.TABS_GO_FORWARD, (_event, id: number) => {
+  ipcMain.on(CHANNELS.TABS_GO_FORWARD, () => {
     // Implement navigation logic as needed
   });
 
   // Handle 'tabs-reload' event
-  ipcMain.on(CHANNELS.TABS_RELOAD, (_event, id: number) => {
+  ipcMain.on(CHANNELS.TABS_RELOAD, () => {
     // Implement reload logic as needed
   });
 });

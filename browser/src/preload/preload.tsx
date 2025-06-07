@@ -12,6 +12,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   reload: (id: number) => ipcRenderer.send(CHANNELS.TABS_RELOAD, id),
 
   // From main to renderer
-  onTabsUpdated: (callback: (tabs: { list: any[], currentId: number }) => void) =>
+  onTabsUpdated: (callback: (tabs: { list: Array<{ id: number; url: string }>, currentId: number | null }) => void) =>
     ipcRenderer.on(CHANNELS.TABS_UPDATED, (_, data) => callback(data)),
 });
