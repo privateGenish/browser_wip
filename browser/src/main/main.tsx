@@ -1,46 +1,101 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
-import { join } from 'path';
-import { TabManager } from './TabManager';
+import { CHANNELS } from '../shared/ipcChannels';
+import path from 'path';
 
 let mainWindow: BrowserWindow | null = null;
-const tabManager = new TabManager();
+
+// Placeholder for tab management logic
+interface Tab {
+  id: number;
+  url: string;
+  // Add other relevant properties
+}
+
+let tabs: Tab[] = [];
+let currentTabId: number | null = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     webPreferences: {
-      preload: join(__dirname, '../preload/preload.js'),
+      preload: path.join(__dirname, 'preload.mjs'),
       contextIsolation: true,
       nodeIntegration: false,
     },
   });
 
-  if (process.env.VITE_DEV_SERVER_URL) {
-    mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
-    mainWindow.webContents.openDevTools();
-  } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
-  }
+  mainWindow.loadFile('index.html');
 
-  tabManager.attachWindow(mainWindow);
-
-  tabManager.on('tabs-updated', (_, data) => {
-    mainWindow?.webContents.send('tabs-updated', data);
-  });
-
-  ipcMain.on('tabs-create', () => tabManager.createTab('https://example.com'));
-  ipcMain.on('tabs-close', (_e, id) => tabManager.closeTab(id));
-  ipcMain.on('tabs-switch', (_e, id) => tabManager.switchTab(id));
-  ipcMain.on('tabs-navigate', (_e, id, url) => tabManager.navigate(id, url));
-  ipcMain.on('tabs-back', (_e, id) => tabManager.goBack(id));
-  ipcMain.on('tabs-forward', (_e, id) => tabManager.goForward(id));
-  ipcMain.on('tabs-reload', (_e, id) => tabManager.reload(id));
-
-  mainWindow.on('closed', () => (mainWindow = null));
+  // Open DevTools for debugging
+  mainWindow.webContents.openDevTools();
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  createWindow();
+
+  // Handle 'tabs-create' event
+  ipcMain.on(CHANNELS.TABS_CREATE, () => {
+    const newTab: Tab = {
+      id: Date.now(),
+      url: 'https://example.com',
+    };
+    tabs.push(newTab);
+    currentTabId = newTab.id;
+    sendTabsUpdated();
+  });
+
+  // Handle 'tabs-close' event
+  ipcMain.on(CHANNELS.TABS_CLOSE, (_event, id: number) => {
+    tabs = tabs.filter(tab => tab.id !== id);
+    if (currentTabId === id) {
+      currentTabId = tabs.length ? tabs[0].id : null;
+    }
+    sendTabsUpdated();
+  });
+
+  // Handle 'tabs-switch' event
+  ipcMain.on(CHANNELS.TABS_SWITCH, (_event, id: number) => {
+    if (tabs.some(tab => tab.id === id)) {
+      currentTabId = id;
+      sendTabsUpdated();
+    }
+  });
+
+  // Handle 'tabs-navigate' event
+  ipcMain.on(CHANNELS.TABS_NAVIGATE, (_event, id: number, url: string) => {
+    const tab = tabs.find(tab => tab.id === id);
+    if (tab) {
+      tab.url = url;
+      sendTabsUpdated();
+    }
+  });
+
+  // Handle 'tabs-back' event
+  ipcMain.on(CHANNELS.TABS_GO_BACK, (_event, id: number) => {
+    // Implement navigation logic as needed
+  });
+
+  // Handle 'tabs-forward' event
+  ipcMain.on(CHANNELS.TABS_GO_FORWARD, (_event, id: number) => {
+    // Implement navigation logic as needed
+  });
+
+  // Handle 'tabs-reload' event
+  ipcMain.on(CHANNELS.TABS_RELOAD, (_event, id: number) => {
+    // Implement reload logic as needed
+  });
+});
+
+// Function to send updated tabs information to renderer
+function sendTabsUpdated() {
+  if (mainWindow) {
+    mainWindow.webContents.send(CHANNELS.TABS_UPDATED, {
+      list: tabs,
+      currentId: currentTabId,
+    });
+  }
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
