@@ -19,7 +19,7 @@ const mockBrowserWindow = jest.fn().mockImplementation(() => ({
 
 const app = {
   isReady: jest.fn().mockReturnValue(true),
-  whenReady: jest.fn().mockResolvedValue(undefined),
+  whenReady: jest.fn(() => Promise.resolve() as Promise<void>),
   getAppPath: jest.fn().mockReturnValue('/mock/app/path'),
   quit: jest.fn(),
   requestSingleInstanceLock: jest.fn().mockReturnValue(true),
