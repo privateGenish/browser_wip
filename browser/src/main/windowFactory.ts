@@ -1,21 +1,9 @@
 import { BrowserWindow, app } from 'electron';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-// Handle both ESM and CJS environments
-const isEsm = typeof __filename === 'undefined';
-
-let _filename: string;
-let _dirname: string;
-
-if (isEsm) {
-  // @ts-expect-error: import.meta is only available in ESM
-  _filename = fileURLToPath(import.meta.url);
-  _dirname = path.dirname(_filename);
-} else {
-  _filename = __filename;
-  _dirname = __dirname;
-}
+// Use CommonJS globals for Jest/Electron compatibility
+const _filename = __filename;
+const _dirname = __dirname;
 
 export let mainWindow: BrowserWindow | null = null;
 
