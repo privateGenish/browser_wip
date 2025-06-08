@@ -1,9 +1,11 @@
 import { BrowserWindow, app } from 'electron';
 import path from 'node:path';
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
 
-// Use CommonJS globals for Jest/Electron compatibility
-const _filename = __filename;
-const _dirname = __dirname;
+// ESM-native path resolution
+const _filename = fileURLToPath(import.meta.url);
+const _dirname = dirname(_filename);
 
 export let mainWindow: BrowserWindow | null = null;
 

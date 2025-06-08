@@ -1,8 +1,10 @@
 import { BrowserWindow, app } from "electron";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath as fileURLToPath$1 } from "node:url";
 import path from "node:path";
-const __filename = fileURLToPath(import.meta.url);
-const __dirname$1 = path.dirname(__filename);
+import { dirname } from "path";
+import { fileURLToPath } from "url";
+const _filename = fileURLToPath(import.meta.url);
+const _dirname = dirname(_filename);
 let mainWindow = null;
 function createWindow() {
   if (mainWindow) return mainWindow;
@@ -15,7 +17,7 @@ function createWindow() {
     backgroundColor: "#0f0f0f",
     // dark neutral
     webPreferences: {
-      preload: path.join(__dirname$1, "../preload/index.js"),
+      preload: path.join(_dirname, "../preload/index.js"),
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
@@ -55,7 +57,7 @@ if (!gotLock) {
     }
   });
 }
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __dirname = path.dirname(fileURLToPath$1(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname, "..");
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
 const MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");

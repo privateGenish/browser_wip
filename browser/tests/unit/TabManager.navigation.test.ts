@@ -4,12 +4,12 @@ import { TabManager } from '../../src/main/TabManager';
 // Define mock BrowserView type for TypeScript
 interface MockBrowserView {
   webContents: {
-    loadURL: jest.Mock<Promise<void>, [string]>;
-    setWindowOpenHandler: jest.Mock;
-    on: jest.Mock;
+    loadURL: import('vitest').Mock<[string], Promise<void>>;
+    setWindowOpenHandler: import('vitest').Mock;
+    on: import('vitest').Mock;
     session: Session;
   };
-  setBounds: jest.Mock;
+  setBounds: import('vitest').Mock;
   [key: string]: unknown;
 }
 
@@ -17,49 +17,49 @@ interface MockBrowserView {
 const mockBrowserViewInstances: MockBrowserView[] = [];
 
 // Mock Electron modules
-jest.mock('electron', () => ({
-  BrowserView: jest.fn().mockImplementation(({ webPreferences }) => {
+vi.mock('electron', () => ({
+  BrowserView: vi.fn().mockImplementation(({ webPreferences }) => {
     const mockWebContents = {
-      loadURL: jest.fn().mockImplementation((url) => {
+      loadURL: vi.fn().mockImplementation((url) => {
         if (url.startsWith('file://')) {
           return Promise.reject(new Error('Unsafe URL'));
         }
         return Promise.resolve();
       }),
-      setWindowOpenHandler: jest.fn(),
-      on: jest.fn(),
+      setWindowOpenHandler: vi.fn(),
+      on: vi.fn(),
       session: webPreferences?.session || {}
     };
 
     const mockView: MockBrowserView = {
       webContents: mockWebContents,
-      setBounds: jest.fn()
+      setBounds: vi.fn()
     };
 
     mockBrowserViewInstances.push(mockView);
     return mockView;
   }),
 
-  BrowserWindow: jest.fn().mockImplementation(() => ({
-    addBrowserView: jest.fn(),
-    getContentSize: jest.fn().mockReturnValue([1024, 768]),
-    on: jest.fn(),
-    setBounds: jest.fn(),
-    destroy: jest.fn()
+  BrowserWindow: vi.fn().mockImplementation(() => ({
+    addBrowserView: vi.fn(),
+    getContentSize: vi.fn().mockReturnValue([1024, 768]),
+    on: vi.fn(),
+    setBounds: vi.fn(),
+    destroy: vi.fn()
   })),
 
   session: {
-    fromPartition: jest.fn().mockImplementation(() => ({
+    fromPartition: vi.fn().mockImplementation(() => ({
       // Mock session methods as needed
       webRequest: {
-        onHeadersReceived: jest.fn(),
+        onHeadersReceived: vi.fn(),
       },
     } as unknown as Session)),
     defaultSession: {}
   },
 
   shell: {
-    openExternal: jest.fn()
+    openExternal: vi.fn()
   }
 }));
 
@@ -68,7 +68,7 @@ describe('TabManager', () => {
   let mockWin: BrowserWindow;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockBrowserViewInstances.length = 0;
     
     mockWin = new BrowserWindow();
@@ -110,7 +110,7 @@ describe('TabManager', () => {
 
     it('should handle unsafe URLs by logging an error', async () => {
       // Arrange
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       
       // Act
       tabManager.createTab('file:///etc/passwd');
