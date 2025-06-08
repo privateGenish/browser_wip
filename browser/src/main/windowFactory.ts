@@ -1,4 +1,4 @@
-import { BrowserWindow, app } from 'electron';
+import { BrowserWindow, app, Menu, shell } from 'electron';
 import path from 'node:path';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -23,48 +23,77 @@ export function createWindow(): BrowserWindow {
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
-      devTools: process.env.DEBUG === 'true',
       spellcheck: false,
       webSecurity: true,
+      allowRunningInsecureContent: false,
     },
   });
 
-  // Strip default menu for production-like environments
-  // and when not explicitly debugging.
+  // Remove default menu in production
   if (process.env.NODE_ENV !== 'development' && process.env.DEBUG !== 'true') {
-    mainWindow.removeMenu();
+    Menu.setApplicationMenu(null);
   }
 
   // Defer showing the window until it's ready
-  mainWindow.once('ready-to-show', () => mainWindow?.show());
+  mainWindow.once('ready-to-show', () => {
+    if (!mainWindow) return;
+    
+    mainWindow.show();
+    mainWindow.focus();
+    
+    // Only open DevTools in development
+    if (!app.isPackaged) {
+      // mainWindow.webContents.openDevTools();
+    }
+  });
 
   // Dev-vs-Prod URL loader
   const devServerUrl = process.env.VITE_DEV_SERVER_URL;
 
-  if (devServerUrl) {
-    void mainWindow.loadURL(devServerUrl);
-    // Optionally open DevTools in development if DEBUG is true
-    if (process.env.DEBUG === 'true') {
-      mainWindow.webContents.openDevTools();
+  const loadApp = async () => {
+    if (!mainWindow) return;
+    
+    try {
+      if (devServerUrl) {
+        await mainWindow.loadURL(devServerUrl);
+      } else {
+        // Production build: load the index.html file
+        const indexPath = path.join(app.getAppPath(), 'dist', 'renderer', 'index.html');
+        await mainWindow.loadFile(indexPath);
+      }
+    } catch (error) {
+      console.error('Failed to load app:', error);
     }
-  } else {
-    // Production build: load the index.html file
-    const indexPath = path.join(app.getAppPath(), 'dist', 'renderer', 'index.html'); 
-    // Note: Adjusted path assuming 'renderer' output is in 'dist/renderer'
-    // This might need further adjustment based on actual vite-plugin-electron-renderer output structure.
-    // A common structure is `projectRoot/dist/renderer/index.html` where `app.getAppPath()` points to `projectRoot/dist/electron` in prod.
-    // Thus, `path.join(app.getAppPath(), '../renderer/index.html')` or similar might be needed.
-    // For now, using a placeholder that needs verification during integration.
-    // A more robust approach might involve `path.resolve(app.getAppPath(), '..', 'renderer', 'index.html')` if `app.getAppPath()` is `dist/electron`
-    // Or if `vite-plugin-electron-renderer` copies assets to `dist/electron/renderer`, then `path.join(app.getAppPath(), 'renderer', 'index.html')` is correct.
-    // The prompt specified `path.join(app.getAppPath(), 'renderer', 'index.html')` which implies the latter.
-    void mainWindow.loadFile(indexPath);
+  };
+
+  void loadApp();
+
+  // Secure popup handling: block all popups except external http(s) URLs
+  const handleWindowOpen = (details: { url: string }) => {
+    if (details.url.startsWith('http')) {
+      shell.openExternal(details.url).catch(console.error);
+    }
+    return { action: 'deny' as const };
+  };
+  
+  // Set up window open handler if available
+  if (mainWindow?.webContents?.setWindowOpenHandler) {
+    mainWindow.webContents.setWindowOpenHandler(handleWindowOpen);
   }
 
   // Lifecycle hook: clear mainWindow when closed to prevent memory leaks
-  mainWindow.on('closed', () => {
+  const cleanup = () => {
+    if (!mainWindow) return;
+    
+    mainWindow.off('closed', cleanup);
+    // webContents and the window itself are likely already destroyed or in the process.
+    // Explicitly calling destroy() or accessing webContents here can lead to errors.
+    // If specific webContents listeners need removal, it's safer to do it in the 'close' event.
+    
     mainWindow = null;
-  });
+  };
+  
+  mainWindow.on('closed', cleanup);
 
   return mainWindow;
 }

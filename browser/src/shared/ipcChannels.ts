@@ -8,9 +8,13 @@
  * - Keep names consistent with their action and domain
  */
 
+// All channel names are strictly prefixed for security and clarity:
+// - Use 'tabs:' for tab management
+// - Use 'main-process:' for main process comms
+// No generic or ambiguous names allowed.
 export const CHANNELS = {
   // Main process communication
-  MAIN_PROCESS_MESSAGE: 'main-process-message',
+  MAIN_PROCESS_STATUS: 'main-process:status',
   
   // Tab management channels
   TABS_CREATE: 'tabs:create',

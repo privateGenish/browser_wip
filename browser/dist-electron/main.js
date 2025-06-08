@@ -1,4 +1,4 @@
-import { BrowserWindow, app } from "electron";
+import { BrowserWindow, Menu, app, shell } from "electron";
 import { fileURLToPath as fileURLToPath$1 } from "node:url";
 import path from "node:path";
 import { dirname } from "path";
@@ -7,6 +7,7 @@ const _filename = fileURLToPath(import.meta.url);
 const _dirname = dirname(_filename);
 let mainWindow = null;
 function createWindow() {
+  var _a;
   if (mainWindow) return mainWindow;
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -21,28 +22,50 @@ function createWindow() {
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
-      devTools: process.env.DEBUG === "true",
       spellcheck: false,
-      webSecurity: true
+      webSecurity: true,
+      allowRunningInsecureContent: false
     }
   });
   if (process.env.NODE_ENV !== "development" && process.env.DEBUG !== "true") {
-    mainWindow.removeMenu();
+    Menu.setApplicationMenu(null);
   }
-  mainWindow.once("ready-to-show", () => mainWindow == null ? void 0 : mainWindow.show());
-  const devServerUrl = process.env.VITE_DEV_SERVER_URL;
-  if (devServerUrl) {
-    void mainWindow.loadURL(devServerUrl);
-    if (process.env.DEBUG === "true") {
-      mainWindow.webContents.openDevTools();
-    }
-  } else {
-    const indexPath = path.join(app.getAppPath(), "dist", "renderer", "index.html");
-    void mainWindow.loadFile(indexPath);
-  }
-  mainWindow.on("closed", () => {
-    mainWindow = null;
+  mainWindow.once("ready-to-show", () => {
+    if (!mainWindow) return;
+    mainWindow.show();
+    mainWindow.focus();
+    if (!app.isPackaged) ;
   });
+  const devServerUrl = process.env.VITE_DEV_SERVER_URL;
+  const loadApp = async () => {
+    if (!mainWindow) return;
+    try {
+      if (devServerUrl) {
+        await mainWindow.loadURL(devServerUrl);
+      } else {
+        const indexPath = path.join(app.getAppPath(), "dist", "renderer", "index.html");
+        await mainWindow.loadFile(indexPath);
+      }
+    } catch (error) {
+      console.error("Failed to load app:", error);
+    }
+  };
+  void loadApp();
+  const handleWindowOpen = (details) => {
+    if (details.url.startsWith("http")) {
+      shell.openExternal(details.url).catch(console.error);
+    }
+    return { action: "deny" };
+  };
+  if ((_a = mainWindow == null ? void 0 : mainWindow.webContents) == null ? void 0 : _a.setWindowOpenHandler) {
+    mainWindow.webContents.setWindowOpenHandler(handleWindowOpen);
+  }
+  const cleanup = () => {
+    if (!mainWindow) return;
+    mainWindow.off("closed", cleanup);
+    mainWindow = null;
+  };
+  mainWindow.on("closed", cleanup);
   return mainWindow;
 }
 const gotLock = app.requestSingleInstanceLock();

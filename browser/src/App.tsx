@@ -58,7 +58,7 @@ function App() {
         onNewTab={handleNewTab}
       />
       <div className="flex-1 bg-white">
-        {/* Placeholder for BrowserView content */}
+        {/* WebContentsView content will be rendered here by the main process */}
       </div>
     </div>
   );

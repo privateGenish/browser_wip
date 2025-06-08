@@ -1,8 +1,8 @@
-import { BrowserWindow, BrowserView, session, Session } from 'electron';
+import { BrowserWindow, WebContentsView, session, Session } from 'electron';
 import { TabManager } from '../../src/main/TabManager';
 
-// Define mock BrowserView type for TypeScript
-interface MockBrowserView {
+// Define mock WebContentsView type for TypeScript
+interface MockWebContentsView {
   webContents: {
     loadURL: import('vitest').Mock<[string], Promise<void>>;
     setWindowOpenHandler: import('vitest').Mock;
@@ -10,15 +10,16 @@ interface MockBrowserView {
     session: Session;
   };
   setBounds: import('vitest').Mock;
+  setVisible: import('vitest').Mock;
   [key: string]: unknown;
 }
 
-// Track mock BrowserView instances
-const mockBrowserViewInstances: MockBrowserView[] = [];
+// Track mock WebContentsView instances
+const mockWebContentsViewInstances: MockWebContentsView[] = [];
 
 // Mock Electron modules
 vi.mock('electron', () => ({
-  BrowserView: vi.fn().mockImplementation(({ webPreferences }) => {
+  WebContentsView: vi.fn().mockImplementation(({ webPreferences }) => {
     const mockWebContents = {
       loadURL: vi.fn().mockImplementation((url) => {
         if (url.startsWith('file://')) {
@@ -28,20 +29,32 @@ vi.mock('electron', () => ({
       }),
       setWindowOpenHandler: vi.fn(),
       on: vi.fn(),
-      session: webPreferences?.session || {}
+      session: webPreferences?.session || {},
+      canGoBack: vi.fn().mockReturnValue(true),
+      canGoForward: vi.fn().mockReturnValue(true),
+      goBack: vi.fn(),
+      goForward: vi.fn(),
+      reload: vi.fn(),
+      getURL: vi.fn().mockReturnValue('https://example.com'),
+      getTitle: vi.fn().mockReturnValue('Example Title')
     };
 
-    const mockView: MockBrowserView = {
+    const mockView: MockWebContentsView = {
       webContents: mockWebContents,
-      setBounds: vi.fn()
+      setBounds: vi.fn(),
+      setVisible: vi.fn()
     };
 
-    mockBrowserViewInstances.push(mockView);
+    mockWebContentsViewInstances.push(mockView);
     return mockView;
   }),
 
   BrowserWindow: vi.fn().mockImplementation(() => ({
-    addBrowserView: vi.fn(),
+    contentView: {
+      addChildView: vi.fn(),
+      removeChildView: vi.fn(),
+      children: []
+    },
     getContentSize: vi.fn().mockReturnValue([1024, 768]),
     on: vi.fn(),
     setBounds: vi.fn(),
@@ -50,7 +63,6 @@ vi.mock('electron', () => ({
 
   session: {
     fromPartition: vi.fn().mockImplementation(() => ({
-      // Mock session methods as needed
       webRequest: {
         onHeadersReceived: vi.fn(),
       },
@@ -69,7 +81,7 @@ describe('TabManager', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockBrowserViewInstances.length = 0;
+    mockWebContentsViewInstances.length = 0;
     
     mockWin = new BrowserWindow();
     tabManager = new TabManager(mockWin);
@@ -81,14 +93,14 @@ describe('TabManager', () => {
       tabManager.createTab('https://example.com');
 
       // Assert
-      expect(BrowserView).toHaveBeenCalledTimes(1);
-      expect(mockWin.addBrowserView).toHaveBeenCalledTimes(1);
+      expect(WebContentsView).toHaveBeenCalledTimes(1);
+      expect(mockWin.contentView.addChildView).toHaveBeenCalledTimes(1);
       
-      const mockView = mockBrowserViewInstances[0];
+      const mockView = mockWebContentsViewInstances[0];
       expect(mockView.webContents.loadURL).toHaveBeenCalledWith('https://example.com');
       
       // Verify secure defaults
-      expect(BrowserView).toHaveBeenCalledWith(expect.objectContaining({
+      expect(WebContentsView).toHaveBeenCalledWith(expect.objectContaining({
         webPreferences: expect.objectContaining({
           contextIsolation: true,
           sandbox: true,
@@ -131,7 +143,7 @@ describe('TabManager', () => {
       tabManager.createTab('https://example.com');
 
       // Assert
-      const mockView = mockBrowserViewInstances[0];
+      const mockView = mockWebContentsViewInstances[0];
       expect(mockView.setBounds).toHaveBeenCalledWith({
         x: 0,
         y: 40,

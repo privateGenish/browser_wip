@@ -32,10 +32,15 @@ vi.mock('electron', () => {
     on: vi.fn(),
   };
 
+  const mockMenu = {
+    setApplicationMenu: vi.fn()
+  };
+
   return {
     app: mockApp,
     BrowserWindow: internalMockBrowserWindowConstructor, // Use the constructor defined *inside* the factory
     ipcMain: mockIpcMain,
+    Menu: mockMenu
   };
 });
 

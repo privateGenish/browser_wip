@@ -34,7 +34,7 @@ const vitestConfig = defineVitestConfig({
     globals: true, // Use Vitest globals (describe, test, expect, vi)
     environment: 'node', // For main process/Node.js tests. Use 'jsdom' for React components.
     setupFiles: ['./tests/setupTests.ts'], // Path to your test setup file
-    include: ['tests/**/*.test.ts'], // Pattern for test files
+    include: ['tests/**/*.{test,spec}.ts'], // Pattern for test files (both .test.ts and .spec.ts)
     // Vitest attempts to reuse Vite's `resolve.alias` automatically.
     // Add specific deps optimization if needed for Electron or native modules.
     deps: {
