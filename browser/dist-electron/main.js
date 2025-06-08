@@ -20,7 +20,8 @@ function createWindow() {
       sandbox: true,
       nodeIntegration: false,
       devTools: process.env.DEBUG === "true",
-      spellcheck: false
+      spellcheck: false,
+      webSecurity: true
     }
   });
   if (process.env.NODE_ENV !== "development" && process.env.DEBUG !== "true") {

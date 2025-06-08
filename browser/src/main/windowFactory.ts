@@ -1,5 +1,21 @@
 import { BrowserWindow, app } from 'electron';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// Handle both ESM and CJS environments
+const isEsm = typeof __filename === 'undefined';
+
+let _filename: string;
+let _dirname: string;
+
+if (isEsm) {
+  // @ts-expect-error: import.meta is only available in ESM
+  _filename = fileURLToPath(import.meta.url);
+  _dirname = path.dirname(_filename);
+} else {
+  _filename = __filename;
+  _dirname = __dirname;
+}
 
 export let mainWindow: BrowserWindow | null = null;
 
@@ -13,7 +29,7 @@ export function createWindow(): BrowserWindow {
     titleBarStyle: 'hiddenInset',
     backgroundColor: '#0f0f0f',  // dark neutral
     webPreferences: {
-      preload: path.join(__dirname, '../preload/index.js'),
+      preload: path.join(_dirname, '../preload/index.js'),
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
